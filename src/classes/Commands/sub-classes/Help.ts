@@ -196,6 +196,7 @@ export default class HelpCommands {
                         `${prefix}check (sku|name|defindex)=<a> - Request the current price for an item from ${
                             isCustomPricer ? 'Custom Pricer' : 'PriceDB.IO'
                         }`,
+                        `${prefix}checkbptf (sku|name|defindex)=<a> - Check live backpack.tf buy/sell listings for an item`,
                         `pricecheck (sku|name|defindex|item)=<a> - Request an item to be price checked by ${
                             isCustomPricer ? 'Custom Pricer' : 'PriceDB.IO'
                         }`,

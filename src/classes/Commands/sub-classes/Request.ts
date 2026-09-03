@@ -12,6 +12,7 @@ import { testPriceKey } from '../../../lib/tools/export';
 import { UnknownDictionary } from '../../../types/common';
 import IPricer, { RequestCheckFn, RequestCheckResponse } from '../../IPricer';
 import Pricelist from '../../Pricelist';
+import { getLiveListingSummary } from '../../Carts/utils/liveListingCheck';
 
 export default class RequestCommands {
     constructor(private readonly bot: Bot, private priceSource: IPricer) {
@@ -136,6 +137,62 @@ export default class RequestCommands {
                 }`
             );
         }
+    }
+
+    async checkBptfCommand(steamID: SteamID, message: string): Promise<void> {
+        const params = CommandParser.parseParams(CommandParser.removeCommand(removeLinkProtocol(message)));
+        let sku = params.sku as string;
+        if (sku !== undefined && !testPriceKey(sku)) {
+            return this.bot.sendMessage(steamID, `❌ "sku" should not be empty or wrong format.`);
+        }
+
+        if (sku === undefined) {
+            const item = getItemFromParams(steamID, params, this.bot);
+            if (item === null) {
+                return;
+            }
+
+            sku = SKU.fromObject(item);
+        } else {
+            sku = SKU.fromObject(fixItem(SKU.fromString(sku), this.bot.schema));
+        }
+
+        const name = this.bot.schema.getName(SKU.fromString(sku));
+
+        if (!this.bot.options.bptfAccessToken) {
+            return this.bot.sendMessage(steamID, `❌ bptfAccessToken is not set, can't check live bptf listings.`);
+        }
+
+        const summary = await getLiveListingSummary(this.bot, sku, 0);
+
+        if (summary === null) {
+            return this.bot.sendMessage(
+                steamID,
+                `❌ Could not fetch live backpack.tf listings for ${name} right now (request failed or rate limited). Try again shortly.`
+            );
+        }
+
+        const keyPriceMetal = this.bot.pricelist.getKeyPrice.metal;
+        const buyStr =
+            summary.highestBuy === null
+                ? 'No live buy listings'
+                : `${Currencies.toCurrencies(summary.highestBuy, keyPriceMetal).toString()} (${
+                      summary.buyCount
+                  } listing${summary.buyCount === 1 ? '' : 's'})`;
+        const sellStr =
+            summary.cheapestSell === null
+                ? 'No live sell listings'
+                : `${Currencies.toCurrencies(summary.cheapestSell, keyPriceMetal).toString()} (${
+                      summary.sellCount
+                  } listing${summary.sellCount === 1 ? '' : 's'})`;
+
+        this.bot.sendMessage(
+            steamID,
+            `🔎 ${name} — live backpack.tf listings:\n` +
+                `• Highest buy  : ${buyStr}\n` +
+                `• Cheapest sell: ${sellStr}\n` +
+                `https://backpack.tf/classifieds?item=${encodeURIComponent(name)}`
+        );
     }
 }
 

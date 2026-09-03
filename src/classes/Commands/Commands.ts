@@ -334,6 +334,8 @@ export default class Commands {
                 void this.request.pricecheckAllCommand(steamID);
             } else if (command === 'check' && isAdmin) {
                 void this.request.checkCommand(steamID, message);
+            } else if (command === 'checkbptf' && isAdmin) {
+                void this.request.checkBptfCommand(steamID, message);
             } else if (command === 'find' && isAdmin) {
                 void this.pManager.findCommand(steamID, message);
             } else if (command == 'backup' && isAdmin) {
