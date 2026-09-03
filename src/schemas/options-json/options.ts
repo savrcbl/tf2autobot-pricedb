@@ -464,6 +464,22 @@ export const optionsSchema: jsonschema.Schema = {
                 manncoStore: {
                     $ref: '#/definitions/only-enable'
                 },
+                liveListingCheck: {
+                    type: 'object',
+                    properties: {
+                        enable: {
+                            type: 'boolean'
+                        },
+                        tolerancePercent: {
+                            type: 'number'
+                        },
+                        cacheSeconds: {
+                            type: 'number'
+                        }
+                    },
+                    required: ['enable'],
+                    additionalProperties: false
+                },
                 startHalted: {
                     $ref: '#/definitions/only-enable'
                 },

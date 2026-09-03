@@ -3,6 +3,7 @@ import SKU from '@tf2autobot/tf2-sku';
 import Currencies from '@tf2autobot/tf2-currencies';
 import { ItemsDict, OurTheirItemsDict, Prices } from '@tf2autobot/tradeoffer-manager';
 import Cart from './Cart';
+import { getCheapestLiveSellValue } from './utils/liveListingCheck';
 import Inventory, { getSkuAmountCanTrade, DictItem } from '../Inventory';
 import Pricelist from '../Pricelist';
 import TF2Inventory from '../TF2Inventory';
@@ -73,6 +74,53 @@ export default class UserCart extends Cart {
                     '• Steam Guard Mobile Authenticator - https://support.steampowered.com/kb_article.php?ref=8625-WRAH-9030' +
                     '\n• How to set up Steam Guard Mobile Authenticator - https://support.steampowered.com/kb_article.php?ref=4440-RTUI-9218 '
             );
+        }
+
+        const liveListingCheckOpt = this.bot.options.miscSettings.liveListingCheck;
+
+        if (liveListingCheckOpt?.enable) {
+            const keyPriceMetal = this.bot.pricelist.getKeyPrice.metal;
+            const tolerance = 1 + (liveListingCheckOpt.tolerancePercent ?? 0) / 100;
+
+            for (const sku in this.their) {
+                if (!Object.prototype.hasOwnProperty.call(this.their, sku)) {
+                    continue;
+                }
+
+                if (['5021;6', '5002;6', '5001;6', '5000;6'].includes(sku)) {
+                    // Don't sanity-check pure currencies against classifieds listings
+                    continue;
+                }
+
+                const entry = this.bot.pricelist.getPrice({ priceKey: sku, onlyEnabled: true });
+                if (entry === null || entry.buy === null) {
+                    continue;
+                }
+
+                const ourBuyValue = entry.buy.toValue(keyPriceMetal);
+
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                const cheapestLiveSellValue: number | null = await getCheapestLiveSellValue(
+                    this.bot,
+                    sku,
+                    liveListingCheckOpt.cacheSeconds ?? 60
+                ).catch(() => null);
+
+                if (cheapestLiveSellValue === null) {
+                    // Could not verify (API error/rate limit/no listings) - don't block the trade
+                    continue;
+                }
+
+                if (ourBuyValue > cheapestLiveSellValue * tolerance) {
+                    const ourBuyString = entry.buy.toString();
+                    const cheapestString = Currencies.toCurrencies(cheapestLiveSellValue, keyPriceMetal).toString();
+
+                    return Promise.reject(
+                        `I can't buy ${entry.name} right now - my buy price (${ourBuyString}) is above the ` +
+                            `cheapest one currently for sale (${cheapestString}).`
+                    );
+                }
+            }
         }
 
         const assetidsToCheck = this.offer.data('_dupeCheck') as string[];

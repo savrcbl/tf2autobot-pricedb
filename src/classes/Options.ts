@@ -43,6 +43,11 @@ export const DEFAULTS: JsonOptions = {
         manncoStore: {
             enable: false
         },
+        liveListingCheck: {
+            enable: false,
+            tolerancePercent: 0,
+            cacheSeconds: 60
+        },
         startHalted: {
             enable: false
         },
@@ -1295,6 +1300,13 @@ interface PriceDBStore extends OnlyEnable {
 
 type ManncoStore = OnlyEnable;
 
+interface LiveListingCheck extends OnlyEnable {
+    /** How far (in %) our buy price is allowed to sit above the cheapest live sell listing before we refuse to buy. */
+    tolerancePercent?: number;
+    /** How long (in seconds) to reuse a fetched listing snapshot for a SKU before checking again. */
+    cacheSeconds?: number;
+}
+
 // --------- Misc Settings ----------
 
 // ------------ SteamConnection ------------
@@ -1317,6 +1329,7 @@ interface MiscSettings {
     createListings?: OnlyEnable;
     pricedbStore?: PriceDBStore;
     manncoStore?: ManncoStore;
+    liveListingCheck?: LiveListingCheck;
     startHalted?: OnlyEnable;
     counterOffer?: Counteroffer;
     addFriends?: OnlyEnable;
