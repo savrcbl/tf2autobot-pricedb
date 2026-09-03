@@ -17,7 +17,7 @@ import Currencies from '@tf2autobot/tf2-currencies';
 import { UnknownDictionary } from '../../types/common';
 
 import { accepted, declined, cancelled, acceptEscrow, invalid } from './offer/notify/export-notify';
-import { processAccepted, updateListings, PriceCheckQueue } from './offer/accepted/exportAccepted';
+import { processAccepted, updateListings, PriceCheckQueue, checkLivePriceAlert } from './offer/accepted/exportAccepted';
 import processDeclined from './offer/processDeclined';
 import { sendReview } from './offer/review/export-review';
 import { keepMetalSupply, craftDuplicateWeapons, craftClassWeapons } from './utils/export-utils';
@@ -2346,6 +2346,11 @@ export default class MyHandler extends Handler {
                     highValue.isDisableSKU = result.isDisableSKU;
                     highValue.theirItems = result.theirHighValuedItems;
                     highValue.items = result.items;
+
+                    // Fire-and-forget: never block or delay trade handling on a bptf API call
+                    void checkLivePriceAlert(offer, this.bot).catch(err =>
+                        log.debug(`Live price alert check errored for offer #${offer.id}, skipping: `, err)
+                    );
                 } else if (
                     offer.state === TradeOfferManager.ETradeOfferState['Declined'] &&
                     this.bot.options.tradeSummary.declinedTrade.enable &&

@@ -46,7 +46,8 @@ export const DEFAULTS: JsonOptions = {
         liveListingCheck: {
             enable: false,
             tolerancePercent: 0,
-            cacheSeconds: 60
+            cacheSeconds: 60,
+            alertOnMismatch: false
         },
         startHalted: {
             enable: false
@@ -1305,6 +1306,8 @@ interface LiveListingCheck extends OnlyEnable {
     tolerancePercent?: number;
     /** How long (in seconds) to reuse a fetched listing snapshot for a SKU before checking again. */
     cacheSeconds?: number;
+    /** Send a Discord alert after a trade if the buy price looked stale vs live bptf listings. Does not block or delay trades - runs after acceptance. */
+    alertOnMismatch?: boolean;
 }
 
 // --------- Misc Settings ----------
