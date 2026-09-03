@@ -4,6 +4,7 @@ import Currencies from '@tf2autobot/tf2-currencies';
 import { ItemsDict, OurTheirItemsDict, Prices } from '@tf2autobot/tradeoffer-manager';
 import Cart from './Cart';
 import { getCheapestLiveSellValue } from './utils/liveListingCheck';
+import findItemOnBotNetwork, { BotNetworkMatch } from '../Commands/functions/botNetworkLookup';
 import Inventory, { getSkuAmountCanTrade, DictItem } from '../Inventory';
 import Pricelist from '../Pricelist';
 import TF2Inventory from '../TF2Inventory';
@@ -520,6 +521,14 @@ export default class UserCart extends Cart {
                 if (ourAssetidsCount === 0) {
                     alteredMessage =
                         "I don't have any " + pluralize(this.bot.schema.getName(SKU.fromString(entry.sku), false));
+
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                    const match: BotNetworkMatch | null = await findItemOnBotNetwork(this.bot, entry.sku).catch(
+                        () => null
+                    );
+                    if (match) {
+                        alteredMessage += `. I have it on another one of my bots though - you can grab it here: ${match.tradeUrl}`;
+                    }
                 } else {
                     alteredMessage =
                         'I only have ' +

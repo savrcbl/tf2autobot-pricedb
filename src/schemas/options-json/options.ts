@@ -483,6 +483,32 @@ export const optionsSchema: jsonschema.Schema = {
                     required: ['enable'],
                     additionalProperties: false
                 },
+                botNetwork: {
+                    type: 'object',
+                    properties: {
+                        enable: {
+                            type: 'boolean'
+                        },
+                        bots: {
+                            type: 'array',
+                            items: {
+                                type: 'object',
+                                properties: {
+                                    steamID: {
+                                        type: 'string'
+                                    },
+                                    tradeUrl: {
+                                        type: 'string'
+                                    }
+                                },
+                                required: ['steamID', 'tradeUrl'],
+                                additionalProperties: false
+                            }
+                        }
+                    },
+                    required: ['enable'],
+                    additionalProperties: false
+                },
                 startHalted: {
                     $ref: '#/definitions/only-enable'
                 },

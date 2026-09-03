@@ -7,6 +7,7 @@ import { Message as DiscordMessage } from 'discord.js';
 
 import * as c from './sub-classes/export';
 import { removeLinkProtocol, getItemFromParams, getItemAndAmount } from './functions/utils';
+import findItemOnBotNetwork, { BotNetworkMatch } from './functions/botNetworkLookup';
 
 import Bot from '../Bot';
 import CommandParser from '../CommandParser';
@@ -160,7 +161,7 @@ export default class Commands {
                 if (isInvalidType) {
                     return this.bot.sendMessage(steamID, '❌ Command not available.');
                 }
-                this.buyCartCommand(steamID, message, prefix);
+                void this.buyCartCommand(steamID, message, prefix);
             } else if (command === 'sellcart') {
                 if (isInvalidType) {
                     return this.bot.sendMessage(steamID, '❌ Command not available.');
@@ -611,7 +612,7 @@ export default class Commands {
 
     // Multiple items trade
 
-    private buyCartCommand(steamID: SteamID, message: string, prefix: string): void {
+    private async buyCartCommand(steamID: SteamID, message: string, prefix: string): Promise<void> {
         const currentCart = Cart.getCart(steamID);
 
         if (currentCart !== null && !(currentCart instanceof UserCart)) {
@@ -659,12 +660,22 @@ export default class Commands {
 
         // Correct trade if needed
         if (amountCanTrade <= 0) {
-            return this.bot.sendMessage(
-                steamID,
+            let reply =
                 'I ' +
-                    (ourAmount > 0 ? "can't sell" : "don't have") +
-                    ` any ${(cartAmount > 0 ? 'more ' : '') + pluralize(name, 0)}.`
-            );
+                (ourAmount > 0 ? "can't sell" : "don't have") +
+                ` any ${(cartAmount > 0 ? 'more ' : '') + pluralize(name, 0)}.`;
+
+            if (ourAmount === 0) {
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                const match: BotNetworkMatch | null = await findItemOnBotNetwork(this.bot, info.priceKey).catch(
+                    () => null
+                );
+                if (match) {
+                    reply += ` I have it on another one of my bots though - you can grab it here: ${match.tradeUrl}`;
+                }
+            }
+
+            return this.bot.sendMessage(steamID, reply);
         }
 
         if (amount > amountCanTrade) {

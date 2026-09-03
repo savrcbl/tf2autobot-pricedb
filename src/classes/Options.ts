@@ -49,6 +49,10 @@ export const DEFAULTS: JsonOptions = {
             cacheSeconds: 60,
             alertOnMismatch: false
         },
+        botNetwork: {
+            enable: false,
+            bots: []
+        },
         startHalted: {
             enable: false
         },
@@ -1310,6 +1314,16 @@ interface LiveListingCheck extends OnlyEnable {
     alertOnMismatch?: boolean;
 }
 
+interface BotNetworkEntry {
+    steamID: string;
+    tradeUrl: string;
+}
+
+interface BotNetwork extends OnlyEnable {
+    /** Other bots you own to check for stock when a !buy/!buycart customer wants something you have zero of. */
+    bots?: BotNetworkEntry[];
+}
+
 // --------- Misc Settings ----------
 
 // ------------ SteamConnection ------------
@@ -1333,6 +1347,7 @@ interface MiscSettings {
     pricedbStore?: PriceDBStore;
     manncoStore?: ManncoStore;
     liveListingCheck?: LiveListingCheck;
+    botNetwork?: BotNetwork;
     startHalted?: OnlyEnable;
     counterOffer?: Counteroffer;
     addFriends?: OnlyEnable;
