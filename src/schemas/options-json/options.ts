@@ -475,6 +475,9 @@ export const optionsSchema: jsonschema.Schema = {
                         },
                         cacheSeconds: {
                             type: 'number'
+                        },
+                        alertOnMismatch: {
+                            type: 'boolean'
                         }
                     },
                     required: ['enable'],
