@@ -29,6 +29,16 @@
         "manncoStore": {
             "enable": true
         },
+        "liveListingCheck": {
+            "enable": false,
+            "tolerancePercent": 0,
+            "cacheSeconds": 60,
+            "alertOnMismatch": false
+        },
+        "botNetwork": {
+            "enable": false,
+            "bots": []
+        },
         "startHalted": {
             "enable": false
         },
