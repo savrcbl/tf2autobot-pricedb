@@ -3,7 +3,7 @@ import SKU from '@tf2autobot/tf2-sku';
 import pluralize from 'pluralize';
 import * as timersPromises from 'timers/promises';
 import Currencies from '@tf2autobot/tf2-currencies';
-import { removeLinkProtocol, getItemFromParams } from '../functions/utils';
+import { removeLinkProtocol, getItemFromParams, buildBptfStatsUrl } from '../functions/utils';
 import Bot from '../../Bot';
 import CommandParser from '../../CommandParser';
 import log from '../../../lib/logger';
@@ -191,7 +191,7 @@ export default class RequestCommands {
             `🔎 ${name} — live backpack.tf listings:\n` +
                 `• Highest buy  : ${buyStr}\n` +
                 `• Cheapest sell: ${sellStr}\n` +
-                `https://backpack.tf/classifieds?item=${encodeURIComponent(name)}`
+                buildBptfStatsUrl(this.bot, sku)
         );
     }
 }
