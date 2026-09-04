@@ -740,3 +740,26 @@ export function getItemFromParams(
 export function removeLinkProtocol(message: string): string {
     return message.replace(/(\w+:|^)\/\//g, '');
 }
+
+/**
+ * Builds a backpack.tf item stats page URL, e.g.
+ * https://backpack.tf/stats/Strange/Lollichop/Tradable/Craftable
+ *
+ * backpack.tf's /classifieds?item=<name> search does not reliably handle
+ * quality/craftable prefixes (Strange, Non-Craftable, etc.) baked into the
+ * full display name - the /stats/ page wants those broken out into separate
+ * path segments instead.
+ */
+export function buildBptfStatsUrl(bot: Bot, sku: string): string {
+    const item = SKU.fromString(sku);
+    const quality = bot.schema.getQualityById(item.quality) ?? 'Unique';
+    const schemaItem = bot.schema.getItemByDefindex(item.defindex);
+    const baseName = schemaItem ? schemaItem.item_name : bot.schema.getName(item, false);
+
+    const tradable = item.tradable === false ? 'Non-Tradable' : 'Tradable';
+    const craftable = item.craftable === false ? 'Non-Craftable' : 'Craftable';
+
+    return `https://backpack.tf/stats/${encodeURIComponent(quality)}/${encodeURIComponent(
+        baseName
+    )}/${tradable}/${craftable}`;
+}
