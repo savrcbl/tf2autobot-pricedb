@@ -51,6 +51,7 @@ import filterAxiosError from '@tf2autobot/filter-axios-error';
 import sendTf2SystemMessage from '../DiscordWebhook/sendTf2SystemMessage';
 import sendTf2DisplayNotification from '../DiscordWebhook/sendTf2DisplayNotification';
 import sendTf2ItemBroadcast from '../DiscordWebhook/sendTf2ItemBroadcast';
+import sendStartup from '../DiscordWebhook/sendStartup';
 import { apiRequest } from '../../lib/apiRequest';
 
 const filterReasons = (reasons: string[]) => {
@@ -240,6 +241,8 @@ export default class MyHandler extends Handler {
 
         this.bot.startSteamGamePresenceUpdater();
         this.bot.client.setPersona(EPersonaState.Online);
+
+        sendStartup(this.bot);
 
         this.botSteamID = this.bot.client.steamID;
 

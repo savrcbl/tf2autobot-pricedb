@@ -29,12 +29,6 @@
         "manncoStore": {
             "enable": true
         },
-        "liveListingCheck": {
-            "enable": false,
-            "tolerancePercent": 0,
-            "cacheSeconds": 60,
-            "alertOnMismatch": false
-        },
         "botNetwork": {
             "enable": false,
             "bots": []
@@ -508,6 +502,10 @@
         "displayName": "",
         "avatarURL": "",
         "embedColor": "9171753",
+        "startup": {
+                              "enable": true,
+                              "url": ""
+                      },
         "commandCards": {
             "enable": true,
             "text": true,

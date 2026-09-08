@@ -649,6 +649,10 @@ export const DEFAULTS: JsonOptions = {
             enable: false,
             url: ''
         },
+        startup: {
+            enable: false,
+            url: ''
+        },
         sendTf2Events: {
             systemMessage: {
                 enable: true,
@@ -1791,6 +1795,12 @@ interface DiscordWebhook {
     sendAlert?: SendAlertStatsDW;
     sendStats?: SendStatsDW;
     sendTf2Events?: SendTf2Events;
+    startup?: StartupDW;
+}
+
+interface StartupDW extends OnlyEnable {
+    /** Separate webhook URL from sendAlert, so this can be pointed at a different (e.g. high-priority/unmuted) Discord channel. */
+    url?: string;
 }
 
 /** Cards sent in response to Discord bot commands; webhook trade cards are configured separately. */

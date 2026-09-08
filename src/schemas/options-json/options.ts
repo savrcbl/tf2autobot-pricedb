@@ -1974,6 +1974,9 @@ export const optionsSchema: jsonschema.Schema = {
                 sendStats: {
                     $ref: '#/definitions/discord-webhook-enable-url'
                 },
+                startup: {
+                    $ref: '#/definitions/discord-webhook-enable-url'
+                },
                 sendTf2Events: {
                     type: 'object',
                     properties: {
