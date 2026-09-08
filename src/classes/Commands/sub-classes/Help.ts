@@ -167,6 +167,7 @@ export default class HelpCommands {
                         `${prefix}stats - Get statistics for accepted trades 📊`,
                         `itemstats <item name|sku> - Get statistics for specific item (keys/weapons not supported) 📊`,
                         `deadstock [days=<number>] - List pricelist items that haven't traded in [days] (default 7) 📦`,
+                        `lastprice (sku|name|defindex)=<a>[&limit=<number>] - Show the last [limit] (default 5) recorded trades for an item 📜`,
                         `wipestats - Wipe statistics for accepted trades 🔥`,
                         `statsdw - Send statistics to Discord Webhook 📊`,
                         `inventory - Get the bot's current inventory spaces     `,

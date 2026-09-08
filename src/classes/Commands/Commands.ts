@@ -314,6 +314,8 @@ export default class Commands {
                 void this.status.itemStatsCommand(steamID, message);
             } else if (command === 'deadstock' && (isAdmin || isWhitelisted)) {
                 this.status.deadStockCommand(steamID, message);
+            } else if (command === 'lastprice' && (isAdmin || isWhitelisted)) {
+                void this.status.lastPriceCommand(steamID, message);
             } else if (command == 'wipestats' && isAdmin) {
                 void this.status.statsWipeCommand(steamID, message);
             } else if (command === 'inventory' && isAdmin) {

@@ -8,6 +8,9 @@ import Bot from '../../Bot';
 import CommandParser from '../../CommandParser';
 import { stats, profit, itemStats, testPriceKey } from '../../../lib/tools/export';
 import getDeadStock from '../functions/deadStock';
+import getLastTrades, { formatLastTrade } from '../functions/lastPrice';
+import { getItemFromParams, removeLinkProtocol } from '../functions/utils';
+import { fixItem } from '../../../lib/items';
 import { sendStats } from '../../DiscordWebhook/export';
 import loadPollData, { deletePollData } from '../../../lib/tools/polldata';
 import SteamTradeOfferManager from '@tf2autobot/tradeoffer-manager';
@@ -468,6 +471,42 @@ export default class StatusCommands {
         }
 
         this.bot.sendMessage(steamID, reply);
+    }
+
+    async lastPriceCommand(steamID: SteamID, message: string): Promise<void> {
+        const params = CommandParser.parseParams(CommandParser.removeCommand(removeLinkProtocol(message)));
+        let sku = params.sku as string;
+
+        if (sku !== undefined && !testPriceKey(sku)) {
+            return this.bot.sendMessage(steamID, `❌ "sku" should not be empty or wrong format.`);
+        }
+
+        if (sku === undefined) {
+            const item = getItemFromParams(steamID, params, this.bot);
+            if (item === null) {
+                return;
+            }
+
+            sku = SKU.fromObject(item);
+        } else {
+            sku = SKU.fromObject(fixItem(SKU.fromString(sku), this.bot.schema));
+        }
+
+        const limit = typeof params.limit === 'number' && params.limit > 0 ? params.limit : 5;
+        const name = this.bot.schema.getName(SKU.fromString(sku));
+
+        try {
+            const trades = await getLastTrades(this.bot, sku, limit);
+
+            if (trades.length === 0) {
+                return this.bot.sendMessage(steamID, `No recorded trades found for ${name}.`);
+            }
+
+            const lines = trades.map(formatLastTrade).join('\n');
+            this.bot.sendMessage(steamID, `📜 Last ${trades.length} trade(s) for ${name}:\n${lines}`);
+        } catch (err) {
+            this.bot.sendMessage(steamID, `No recorded trades found for ${name}.`);
+        }
     }
 
     versionCommand(steamID: SteamID): void {
