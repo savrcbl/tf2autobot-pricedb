@@ -278,7 +278,7 @@ export default class CartQueue {
             })
             .catch(err => {
                 if (!(err instanceof Error)) {
-                    cart.sendNotification = `❌ I failed to make the offer! Reason: ${err as string}.`;
+                    cart.sendNotification = `❌ I failed to make the offer! Reason: ${err as string}`;
                 } else {
                     log.warn('Failed to make offer');
                     log.error(inspect.inspect(err));
