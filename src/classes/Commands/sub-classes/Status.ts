@@ -7,6 +7,7 @@ import { Message as DiscordMessage } from 'discord.js';
 import Bot from '../../Bot';
 import CommandParser from '../../CommandParser';
 import { stats, profit, itemStats, testPriceKey } from '../../../lib/tools/export';
+import getDeadStock from '../functions/deadStock';
 import { sendStats } from '../../DiscordWebhook/export';
 import loadPollData, { deletePollData } from '../../../lib/tools/polldata';
 import SteamTradeOfferManager from '@tf2autobot/tradeoffer-manager';
@@ -433,6 +434,40 @@ export default class StatusCommands {
                 this.bot.sendMessage(steamID, adminOnlyMessage);
             }
         } else this.bot.sendMessage(steamID, reply);
+    }
+
+    deadStockCommand(steamID: SteamID, message: string): void {
+        const params = CommandParser.parseParams(CommandParser.removeCommand(message));
+        const minDays = typeof params.days === 'number' && params.days > 0 ? params.days : 7;
+
+        const deadStock = getDeadStock(this.bot, minDays);
+
+        if (deadStock.length === 0) {
+            return this.bot.sendMessage(
+                steamID,
+                `✅ Nothing untouched for ${minDays}+ days - everything in your pricelist has traded recently.`
+            );
+        }
+
+        const maxShown = 20;
+        const lines = deadStock
+            .slice(0, maxShown)
+            .map(
+                item =>
+                    `• ${item.name} - ${
+                        item.daysSinceLastTrade === null ? 'never traded' : `${item.daysSinceLastTrade}d ago`
+                    }`
+            );
+
+        let reply = `📦 ${pluralize('item', deadStock.length, true)} untouched for ${minDays}+ days:\n${lines.join(
+            '\n'
+        )}`;
+
+        if (deadStock.length > maxShown) {
+            reply += `\n...and ${deadStock.length - maxShown} more.`;
+        }
+
+        this.bot.sendMessage(steamID, reply);
     }
 
     versionCommand(steamID: SteamID): void {
