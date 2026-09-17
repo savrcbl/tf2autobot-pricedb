@@ -1,3 +1,4 @@
+import { tradeKeyPrice } from '../../lib/tools/tradeKeyPrice';
 import pluralize from 'pluralize';
 import SKU from '@tf2autobot/tf2-sku';
 import Currencies from '@tf2autobot/tf2-currencies';
@@ -134,10 +135,17 @@ export default class UserCart extends Cart {
      * Figure our who the buyer is and get relative currencies
      */
     private get getCurrencies(): { isBuyer: boolean; currencies: Currencies } {
-        const keyPrice = this.bot.pricelist.getKeyPrice;
+        return this.calculateCurrencies(this.bot.pricelist.getKeyPrices);
+    }
+
+    private calculateCurrencies(keyPrices: { buy: Currencies; sell: Currencies }): {
+        isBuyer: boolean;
+        currencies: Currencies;
+    } {
+        const keyPrice = keyPrices.sell;
         const [ourValue, theirValue] = [
-            this.getWhichCurrencies('our').toValue(keyPrice.metal),
-            this.getWhichCurrencies('their').toValue(keyPrice.metal)
+            this.getWhichCurrencies('our', keyPrices).toValue(keyPrice.metal),
+            this.getWhichCurrencies('their', keyPrices).toValue(keyPrice.metal)
         ];
 
         if (ourValue >= theirValue) {
@@ -155,11 +163,10 @@ export default class UserCart extends Cart {
         }
     }
 
-    private getWhichCurrencies(which: 'our' | 'their'): Currencies {
-        const keyPrices = this.bot.pricelist.getKeyPrices;
+    private getWhichCurrencies(which: 'our' | 'their', keyPrices: { buy: Currencies; sell: Currencies }): Currencies {
         // Pure currency trades (key-for-metal, autokeys) use the appropriate
         // side rate. Item trades retain the original single sell-rate logic.
-        const keyPrice = this.isPureCurrencyTrade && which === 'their' ? keyPrices.buy : keyPrices.sell;
+        const keyPrice = tradeKeyPrice(keyPrices, !this.isPureCurrencyTrade, which === 'our');
 
         let value = 0;
 
@@ -208,10 +215,9 @@ export default class UserCart extends Cart {
     private getRequired(
         buyerCurrencies: { [sku: string]: number },
         price: Currencies,
-        useKeys: boolean
+        useKeys: boolean,
+        keyPrice: Currencies
     ): { currencies: { [sku: string]: number }; change: number } {
-        const keyPrice = this.bot.pricelist.getKeyPrice;
-
         const currencyValues: {
             [sku: string]: number;
         } = {
@@ -648,12 +654,14 @@ export default class UserCart extends Cart {
         // Add values to the offer
 
         // Figure out who the buyer is and what they are offering
-        const { isBuyer, currencies } = this.getCurrencies;
+        const keyPrices = this.bot.pricelist.getKeyPrices;
+        const keyPrice = keyPrices.sell;
+        const { isBuyer, currencies } = this.calculateCurrencies(keyPrices);
 
         // We now know who the buyer is, now get their inventory
         const buyerInventory = isBuyer ? ourInventory : theirInventory;
 
-        if (this.bot.inventoryManager.amountCanAfford(this.canUseKeys, currencies, buyerInventory, []) < 1) {
+        if (this.bot.inventoryManager.amountCanAfford(this.canUseKeys, currencies, buyerInventory, [], keyPrice) < 1) {
             // Buyer can't afford the items
             theirInventory.clearFetch();
 
@@ -664,11 +672,9 @@ export default class UserCart extends Cart {
             );
         }
 
-        const keyPrice = this.bot.pricelist.getKeyPrice;
-
         const [ourItemsValue, theirItemsValue] = [
-            this.getWhichCurrencies('our').toValue(keyPrice.metal),
-            this.getWhichCurrencies('their').toValue(keyPrice.metal)
+            this.getWhichCurrencies('our', keyPrices).toValue(keyPrice.metal),
+            this.getWhichCurrencies('their', keyPrices).toValue(keyPrice.metal)
         ];
 
         // Create exchange object with our and their items values
@@ -697,7 +703,7 @@ export default class UserCart extends Cart {
             });
         }
 
-        const required = this.getRequired(buyerCurrenciesCount, currencies, this.canUseKeys);
+        const required = this.getRequired(buyerCurrenciesCount, currencies, this.canUseKeys, keyPrice);
 
         let addWeapons = 0;
         if (this.isWeaponsAsCurrencyEnabled) {
@@ -968,6 +974,7 @@ export default class UserCart extends Cart {
         if (required.change !== 0) {
             let change = Math.abs(required.change);
 
+            exchange[isBuyer ? 'our' : 'their'].value += change;
             exchange[isBuyer ? 'their' : 'our'].value += change;
             exchange[isBuyer ? 'their' : 'our'].scrap += change;
 
