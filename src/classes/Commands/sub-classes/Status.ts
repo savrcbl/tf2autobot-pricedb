@@ -12,6 +12,7 @@ import getLastTrades, { formatLastTrade } from '../functions/lastPrice';
 import { getItemFromParams, removeLinkProtocol } from '../functions/utils';
 import { fixItem } from '../../../lib/items';
 import { sendStats } from '../../DiscordWebhook/export';
+import { collectStatsReadingsForBot } from '../../DiscordWebhook/sendStats';
 import loadPollData, { deletePollData } from '../../../lib/tools/polldata';
 import SteamTradeOfferManager from '@tf2autobot/tradeoffer-manager';
 import log from '../../../lib/logger';
@@ -29,6 +30,11 @@ export default class StatusCommands {
 
         if (!pollData) {
             return this.bot.sendMessage(steamID, '❌ Polldata file(s) not available.');
+        }
+
+        if (steamID.redirectAnswerTo instanceof DiscordMessage && this.bot.discordBot) {
+            const readings = await collectStatsReadingsForBot(this.bot, pollData);
+            if (await this.bot.discordBot.sendStatsAnswer(steamID.redirectAnswerTo, readings)) return;
         }
 
         const trades = stats(this.bot, pollData);
@@ -510,7 +516,9 @@ export default class StatusCommands {
     }
 
     versionCommand(steamID: SteamID): void {
-        if (steamID.redirectAnswerTo instanceof DiscordMessage && this.bot.discordBot) {
+        const commandCards = this.bot.options.discordWebhook.commandCards;
+        const useVersionCard = commandCards?.enable !== false && commandCards?.version !== false;
+        if (steamID.redirectAnswerTo instanceof DiscordMessage && this.bot.discordBot && useVersionCard) {
             void this.bot.checkForUpdates
                 .then(({ hasNewVersion, latestVersion, canUpdateRepo, updateMessage, newVersionIsMajor }) => {
                     const current = process.env.BOT_VERSION_LABEL ?? 'unknown';

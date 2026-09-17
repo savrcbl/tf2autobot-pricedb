@@ -1708,10 +1708,14 @@ export const optionsSchema: jsonschema.Schema = {
                         pure: { type: 'boolean' },
                         rate: { type: 'boolean' },
                         price: { type: 'boolean' },
+                        get: { type: 'boolean' },
+                        autokeys: { type: 'boolean' },
+                        version: { type: 'boolean' },
                         sku: { type: 'boolean' },
                         stock: { type: 'boolean' },
                         pricelist: { type: 'boolean' },
-                        trade: { type: 'boolean' }
+                        trade: { type: 'boolean' },
+                        stats: { type: 'boolean' }
                     },
                     required: [
                         'enable',
@@ -1720,10 +1724,14 @@ export const optionsSchema: jsonschema.Schema = {
                         'pure',
                         'rate',
                         'price',
+                        'get',
+                        'autokeys',
+                        'version',
                         'sku',
                         'stock',
                         'pricelist',
-                        'trade'
+                        'trade',
+                        'stats'
                     ],
                     additionalProperties: false
                 },

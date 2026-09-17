@@ -570,10 +570,14 @@ export const DEFAULTS: JsonOptions = {
             pure: true,
             rate: true,
             price: true,
+            get: true,
+            autokeys: true,
+            version: true,
             sku: true,
             stock: true,
             pricelist: true,
-            trade: true
+            trade: true,
+            stats: true
         },
         tradeSummary: {
             enable: true,
@@ -1787,10 +1791,17 @@ interface CommandCards extends OnlyEnable {
     pure?: boolean;
     rate?: boolean;
     price?: boolean;
+    /** Rich response for !get; false restores the full legacy entry output. */
+    get?: boolean;
+    /** Rich response for !autokeys; false restores the legacy status diagram. */
+    autokeys?: boolean;
+    /** Rich response for !version; false restores the legacy update messages. */
+    version?: boolean;
     sku?: boolean;
     stock?: boolean;
     pricelist?: boolean;
     trade?: boolean;
+    stats?: boolean;
 }
 
 interface TradeSummaryDW extends OnlyEnable {
