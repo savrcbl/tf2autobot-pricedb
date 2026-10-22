@@ -1,9 +1,16 @@
 import callbackQueue from 'callback-queue';
+import Bluebird from 'bluebird';
 import pluralize from 'pluralize';
 import dayjs from 'dayjs';
 import Currencies from '@tf2autobot/tf2-currencies';
 import * as timersPromises from 'timers/promises';
 import Bot from './Bot';
+import NextCritDriver from './NextCritDriver';
+import NextCritCheckout from './NextCritCheckout';
+import NextCritItemUrls from './NextCritItemUrls';
+import skuToHat from '../lib/skuToHat';
+import nextCritSellAssets from './nextCritSellAssets';
+import nextCritBuyListings from './nextCritBuyListings';
 import Pricelist, { Entry, PricesObject } from './Pricelist';
 import log from '../lib/logger';
 import { exponentialBackoff } from '../lib/helpers';
@@ -28,6 +35,14 @@ interface RemoveAllListingsParams {
 }
 
 export default class Listings {
+    private readonly critItemUrls = new NextCritItemUrls();
+
+    private nextCrit: NextCritDriver | undefined;
+
+    private nextCritCheckout: NextCritCheckout | undefined;
+
+    private nextCritSyncTimer: NodeJS.Timeout | undefined;
+
     private checkingAllListings = false;
 
     private removingAllListings = false;
@@ -52,6 +67,16 @@ export default class Listings {
 
     private templates: { buy: string; sell: string };
 
+    configureNextCrit(): void {
+        if (!this.bot.options.nextCritEnable || this.nextCrit) return;
+        this.nextCrit = new NextCritDriver(
+            this.bot.options.nextCritApiKey,
+            undefined,
+            this.bot.options.nextCritAllowSelfSigned
+        );
+        this.nextCritCheckout = new NextCritCheckout(this.bot, this.nextCrit);
+    }
+
     constructor(private readonly bot: Bot) {
         this.bot = bot;
         this.templates = {
@@ -60,6 +85,14 @@ export default class Listings {
                 'I am buying your %name% for %price%, I have %current_stock% / %max_stock%.',
             sell: this.bot.options.details.sell || 'I am selling my %name% for %price%, I am selling %amount_trade%.'
         };
+    }
+
+    startNextCritCheckout(): void {
+        this.nextCritCheckout?.start();
+    }
+
+    stopNextCritCheckout(): void {
+        this.nextCritCheckout?.stop();
     }
 
     checkByPriceKey({
@@ -88,6 +121,7 @@ export default class Listings {
         if (!this.isCreateListing) {
             return;
         }
+        this.scheduleNextCritSync();
 
         if (showLogs) {
             log.debug(`Checking ${priceKey}...`);
@@ -481,7 +515,9 @@ export default class Listings {
                     log.debug('Done checking all');
                     // Done checking all listings
                     this.checkingAllListings = false;
-                    next();
+                    clearTimeout(this.nextCritSyncTimer);
+                    this.nextCritSyncTimer = undefined;
+                    void this.syncNextCritListings().then(() => next());
                 });
             };
 
@@ -535,6 +571,15 @@ export default class Listings {
     }
 
     removeAll(): Promise<void> {
+        clearTimeout(this.nextCritSyncTimer);
+        this.nextCritSyncTimer = undefined;
+        // Callers use Bluebird's asCallback, which native async-function promises do not expose.
+        return Bluebird.all([this.removeAllBackpackListings(), this.nextCrit?.deleteAllListings()]).then<void>(
+            () => undefined
+        );
+    }
+
+    private removeAllBackpackListings(): Promise<void> {
         return new Promise((resolve, reject) => {
             if (this.checkingAllListings) {
                 this.cancelCheckingListings = true;
@@ -865,6 +910,34 @@ export default class Listings {
         }
     }
 
+    scheduleNextCritSync(): void {
+        if (!this.nextCrit || this.nextCritSyncTimer || this.checkingAllListings) return;
+        this.nextCritSyncTimer = setTimeout(() => {
+            this.nextCritSyncTimer = undefined;
+            void this.syncNextCritListings();
+        }, 250);
+    }
+
+    private async syncNextCritListings(): Promise<void> {
+        if (!this.nextCrit || !this.isCreateListing) return;
+        // Queue both intents before yielding, so removeAll always runs after both publishes.
+        const sync = async (intent: 'sell' | 'buy'): Promise<void> => {
+            try {
+                if (intent === 'sell') {
+                    await this.nextCrit.syncSellListings(
+                        nextCritSellAssets(this.bot),
+                        this.bot.client.steamID.getSteamID64()
+                    );
+                } else {
+                    await this.nextCrit.syncBuyListings(nextCritBuyListings(this.bot));
+                }
+            } catch (err) {
+                log.error(`Failed to sync NextCrit ${intent} listings:`, err);
+            }
+        };
+        await Promise.all([sync('sell'), sync('buy')]);
+    }
+
     private getDetails(intent: 0 | 1, amountCanTrade: number, entry: Entry, item?: DictItem): string {
         const opt = this.bot.options;
         const buying = intent === 0;
@@ -994,6 +1067,20 @@ export default class Listings {
             // Get friendly store URL using cached slug if available
             const pricedbStoreUrl = this.bot.getPricedbStoreUrl();
             const pricedbItemUrl = `https://pricedb.io/item/${encodeURIComponent(entry.sku)}`;
+            let critListingUrl = '';
+            if (details.includes('%crit_listing%')) {
+                void this.critItemUrls
+                    .refresh()
+                    .then(updated => {
+                        if (updated) this.checkByPriceKey({ priceKey: entry.id ?? entry.sku });
+                    })
+                    .catch(() => log.warn('Failed to update crit.tf item links in listing descriptions'));
+                try {
+                    critListingUrl = this.critItemUrls.getUrl(skuToHat(entry.sku, this.bot.schema));
+                } catch {
+                    // Some marketplace SKUs have no HAT equivalent; leave their link empty.
+                }
+            }
 
             return details
                 .replace(/%price%/g, isShowBoldOnPrice ? boldDetails(price, style) : price)
@@ -1003,7 +1090,8 @@ export default class Listings {
                 .replace(/%current_stock%/g, isShowBoldOnCurrentStock ? boldDetails(currentStock, style) : currentStock)
                 .replace(/%amount_trade%/g, isShowBoldOnAmount ? boldDetails(amountTrade, style) : amountTrade)
                 .replace(/%pricedb_store%/g, pricedbStoreUrl)
-                .replace(/%pricedb_item%/g, pricedbItemUrl);
+                .replace(/%pricedb_item%/g, pricedbItemUrl)
+                .replace(/%crit_listing%/g, critListingUrl);
         };
 
         const isCustomBuyNote = entry.note?.buy && intent === 0;
